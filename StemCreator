@@ -1,0 +1,217 @@
+#!/bin/bash
+
+SUPPORTED_FILES=('.mp3' '.m4a' '.wav' '.wma' '.flac' '.ogg' '.wave' '.aif' '.aiff')
+
+USAGE="StemCreator is a Stem file generator. Convert any track into a NI Stem and have fun with Traktor.
+
+Usage: $0 -i [path]
+
+Currently supported audio formats: ${SUPPORTED_FILES[@]}
+"
+VERSION=1.0.0
+
+INPUT_PATH=
+OUTPUT_PATH=
+BASE_PATH=
+APP_PATH=
+FILE_NAME=
+
+read_metadata() {
+    echo "Extracting metadata..."
+
+    ffmpeg -i "$INPUT_PATH" -f ffmetadata "$OUTPUT_PATH/metadata.txt" -y
+    ffmpeg -i "$INPUT_PATH" -an -vcodec copy "$OUTPUT_PATH/cover.jpg" -y
+
+    echo "Done."
+}
+
+create_metadata() {
+    echo "Creating tags.json..."
+
+    cd "$OUTPUT_PATH"
+
+    local path=$( cd "$(dirname "$FILE_NAME")" >/dev/null 2>&1 ; pwd -P )
+
+    echo $path
+
+    local tags=()
+
+    # Add metadata, e.g. `artist` `genre`
+    while IFS=$'\n' read tag; do
+        currentTag=${tag%%=*}
+        currentTag=$(echo "$currentTag" | awk '{ print tolower($0) }')
+        value=${tag##*=}
+        if [[ $currentTag == "title" ]]; then
+            # Add meta `currentTag` as `track` for `ni-stem`
+            tags+=("track=${value}")
+        elif [[ $currentTag == "artist" ]] ||
+             [[ $currentTag == "genre" ]] ||
+             [[ $currentTag == "rating" ]] ||
+             [[ $currentTag == "comment" ]] ||
+             [[ $currentTag == "EnergyLevel" ]] ||
+             [[ $currentTag == "TKEY" ]]; then
+            tags+=("${currentTag}=${value}")
+#        elif [[ $currentTag == "date" ]]; then
+#            tags+=("year=${value}")
+        elif [[ $currentTag == "album" ]]; then
+            tags+=("release=${value}")
+#        elif [[ $currentTag == "track" ]]; then
+#            tags+=("track_no=${value}")
+#        elif [[ $currentTag == "rating" ]]; then
+#            tags+=("rating=${value}")
+#        elif [[ $currentTag == "TBPM" ]]; then
+#            tags+=("TBPM=${value}")
+        fi
+    done < metadata.txt
+
+    # Add `cover`
+    if [[ -e "cover.jpg" ]]; then
+        tags+=("cover=file://${path}/cover.jpg")
+    fi
+
+    echo ${tags[@]}
+
+    jo -p -- "${tags[@]:-}" > tags.json
+
+    cd ../../
+
+    echo "Done."
+}
+
+create_stem() {
+
+    echo "Splitting song..."
+    spleeter separate -i "$INPUT_PATH" -p spleeter:4stems-16kHz -o "$OUTPUT_PATH"
+
+    echo "Creating stem..."
+    cd $APP_PATH
+    ./ni-stem/ni-stem create -s "$OUTPUT_PATH/$FILE_NAME/drums.wav" "$OUTPUT_PATH/$FILE_NAME/bass.wav" "$OUTPUT_PATH/$FILE_NAME/other.wav" "$OUTPUT_PATH/$FILE_NAME/vocals.wav" -x "$OUTPUT_PATH/$FILE_NAME.wav" -t "$OUTPUT_PATH/tags.json" -m "$APP_PATH/metadata.json" -f alac
+    echo "Done."
+}
+
+clean_dir() {
+    echo "Cleaning..."
+
+    cd "$OUTPUT_PATH"
+    if [[ -f "$FILE_NAME.stem.m4a" ]]; then
+        mv "$FILE_NAME.stem.m4a" "$BASE_PATH/STEMS"
+    else
+        echo "Error."
+        exit 2
+    fi
+    cd ..
+    rm -rf "$FILE_NAME"
+
+    echo "Done."
+}
+
+previousChecks() {
+    packages=('ffmpeg' 'spleeter' 'jo')
+    for package in "${packages[@]}"; do
+        if [[ $(which $package) == "" ]]; then
+            echo "Please install $package before running StemCreator."
+            exit 2
+        fi
+    done
+
+    if [[ $(./ni-stem/ni-stem -h) == "" ]]; then
+        echo "Please install ni-stem before running StemCreator."
+        exit 2
+    fi
+    APP_PATH="/Users/aleix/Documents/GitHub/stemgen"
+}
+
+fileSetup() {
+    if [[ -d "$OUTPUT_PATH" ]]; then
+        echo "Helper directory already created."
+    else
+        mkdir "$OUTPUT_PATH"
+    fi
+
+    if [[ -d "$BASE_PATH/STEMS" ]]; then
+        echo "Output dir already created."
+    else
+        mkdir "$BASE_PATH/STEMS"
+        echo "Output dir created."
+    fi
+
+    case "$INPUT_PATH" in
+        *.mp3)
+            ffmpeg -i "$INPUT_PATH" -map_metadata 0:s:0 "$OUTPUT_PATH/$FILE_NAME.wav" -y
+            ;;
+        *.wave)
+            cp "$INPUT_PATH" "$OUTPUT_PATH/$FILE_NAME.wav"
+            ;;
+        *.wav)
+            cp "$INPUT_PATH" "$OUTPUT_PATH/$FILE_NAME.wav"
+            ;;
+        *.aiff)
+            ffmpeg -i "$INPUT_PATH" -map_metadata 0:s:0 "$OUTPUT_PATH/$FILE_NAME.wav" -y
+            ;;
+        *.aif)
+            ffmpeg -i "$INPUT_PATH" -map_metadata 0:s:0 "$OUTPUT_PATH/$FILE_NAME.wav" -y
+            ;;
+        *.flac)
+            ffmpeg -i "$INPUT_PATH" -map_metadata 0:s:0 "$OUTPUT_PATH/$FILE_NAME.wav" -y
+            ;;
+        *)
+            echo "Invalid input file format. File should be one of:" ${SUPPORTED_FILES[@]}
+            exit 1
+            ;;
+    esac
+
+    echo "Ready!"
+}
+
+run() {
+    echo "Generating a Stem file for $FILE_NAME..."
+
+    read_metadata
+    create_metadata
+    create_stem
+    clean_dir
+
+    echo "Success! You'll find the Stem in... $BASE_PATH/STEMS"
+}
+
+while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do case $1 in
+    -V | --version)
+        echo $VERSION
+        exit 0
+        ;;
+    -i | --input)
+        shift; INPUT_PATH=$1
+        ;;
+    -h | --help)
+        echo "$USAGE"
+        exit 0
+        ;;
+    * )
+        echo "$USAGE"
+        exit 1
+        ;;
+esac; shift; done
+if [[ "$1" == '--' ]]; then shift; fi
+
+if [[ -d $INPUT_PATH ]]; then
+    BASE_PATH=$INPUT_PATH
+    previousChecks
+    for file in $BASE_PATH/*$SUPPORTED_FILES;
+        do
+            INPUT_PATH=$file
+            OUTPUT_PATH=${INPUT_PATH%"$SUPPORTED_FILES"}
+            FILE_NAME=${OUTPUT_PATH##*/}
+            if [ ! -f "$BASE_PATH/STEMS/$FILE_NAME.stem.m4a" ]; then
+                fileSetup && run
+            else
+                echo Skipping "$file". Stem already exists;
+            fi
+    done
+elif [[ -f $INPUT_PATH ]]; then
+    OUTPUT_PATH=${INPUT_PATH%"$SUPPORTED_FILES"}
+    FILE_NAME=${OUTPUT_PATH##*/}
+    BASE_PATH=${OUTPUT_PATH%"/$FILE_NAME"}
+    previousChecks && fileSetup && run
+else
+    exit 1
+fi
