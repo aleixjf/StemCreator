@@ -118,7 +118,8 @@ previousChecks() {
         echo "Please install ni-stem before running StemCreator."
         exit 2
     fi
-    APP_PATH="/Users/aleix/Documents/GitHub/stemgen"
+    APP_PATH="`dirname \"$0\"`"
+    APP_PATH="`( cd \"$APP_PATH\" && pwd )`"
 }
 
 fileSetup() {
@@ -152,6 +153,12 @@ fileSetup() {
             ffmpeg -i "$INPUT_PATH" -map_metadata 0:s:0 "$OUTPUT_PATH/$FILE_NAME.wav" -y
             ;;
         *.flac)
+            ffmpeg -i "$INPUT_PATH" -map_metadata 0:s:0 "$OUTPUT_PATH/$FILE_NAME.wav" -y
+            ;;
+        *.ogg)
+            ffmpeg -i "$INPUT_PATH" -map_metadata 0:s:0 "$OUTPUT_PATH/$FILE_NAME.wav" -y
+            ;;
+        *.m4a)
             ffmpeg -i "$INPUT_PATH" -map_metadata 0:s:0 "$OUTPUT_PATH/$FILE_NAME.wav" -y
             ;;
         *)
