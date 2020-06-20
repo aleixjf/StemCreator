@@ -43,7 +43,7 @@ create_metadata() {
         value=${tag##*=}
         if [[ $currentTag == "title" ]]; then
             # Add meta `currentTag` as `track` for `ni-stem`
-            tags+=("track=${value}")
+            tags+=("track=${value} [STEM]")
         elif [[ $currentTag == "artist" ]] ||
              [[ $currentTag == "genre" ]] ||
              [[ $currentTag == "rating" ]] ||
@@ -51,17 +51,18 @@ create_metadata() {
              [[ $currentTag == "EnergyLevel" ]] ||
              [[ $currentTag == "TKEY" ]]; then
             tags+=("${currentTag}=${value}")
-#        elif [[ $currentTag == "date" ]]; then
-#            tags+=("year=${value}")
-        elif [[ $currentTag == "album" ]]; then
-            tags+=("release=${value}")
-#        elif [[ $currentTag == "track" ]]; then
-#            tags+=("track_no=${value}")
-#        elif [[ $currentTag == "rating" ]]; then
-#            tags+=("rating=${value}")
-#        elif [[ $currentTag == "TBPM" ]]; then
-#            tags+=("TBPM=${value}")
+    #    elif [[ $currentTag == "date" ]]; then
+    #        tags+=("year=${value}")
+    #    elif [[ $currentTag == "album" ]]; then
+    #        tags+=("release=${value}")
+    #    elif [[ $currentTag == "track" ]]; then
+    #        tags+=("track_no=${value}")
+    #    elif [[ $currentTag == "rating" ]]; then
+    #        tags+=("rating=${value}")
+    #    elif [[ $currentTag == "TBPM" ]]; then
+    #        tags+=("TBPM=${value}")
         fi
+        
     done < metadata.txt
 
     # Add `cover`
