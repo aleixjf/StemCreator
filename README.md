@@ -48,4 +48,4 @@ If you plan to use StemCreator on copyrighted material, make sure you get proper
 
 ## License
 
-MIT
+MIT License. I do not own any of the rights regarding spleeter, jo, ni-stems or whatever. This is just a script which uses different preexisting scripts. If anyone believes I'm infringing their copyright/license, please let me know. I only want to help the community :)
