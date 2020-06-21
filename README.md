@@ -2,7 +2,7 @@
 
 StemCreator is a Stem file generator. Convert any supported audio file into a Stem.
 
-The resulting Stem file will contain the original audio file splitted into four musical elements – bass, drums, others (piano, synths, other meoldic elements, etc.) and vocals. This will allow anyone to have more control over the music they play, bringing anyone's creativity and possibilities one step further.
+The resulting Stem file will contain the original audio file splitted into four musical elements – drums, bass, others (piano, synths, other meoldic elements, etc.) and vocals. This will allow anyone to have more control over the music they play, bringing anyone's creativity and possibilities one step further.
 
 StemCreator is inspired by `stemgen`, written by @alexdelafosse, and uses `jo` to create a JSON readable file which contains the tags of the original audio file. It then uses `spleeter` to separate the original file into 4 stems and `ni-stem` to create the Stem file from the 4 separated stems and the JSON file.
 
